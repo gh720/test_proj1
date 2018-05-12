@@ -29,7 +29,7 @@ class Location(models.Model):
 
 
 class Visit(models.Model):
-    user_id = models.ForeignKey(User, related_name='visits', on_delete=models.CASCADE)
-    location_id = models.ForeignKey(Location, related_name='visits', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='visits', on_delete=models.CASCADE)
+    location = models.ForeignKey(Location, related_name='visits', on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
     ratio = models.IntegerField(validators=[v.MinValueValidator(0), v.MaxValueValidator(10)])

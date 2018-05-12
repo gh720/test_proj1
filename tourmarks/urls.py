@@ -1,19 +1,29 @@
 from django.conf.urls import url
-from django.urls import path
+from django.urls import path, include
 from rest_framework import routers
 from rest_framework.authtoken import views as rfa_views
-from tourmarks.views import UserCreate, UserListView, UserDetailView, LocationViewSet, VisitViewSet, UserRatioView
+from rest_framework.routers import DefaultRouter
+import rest_framework.urls as drf_urls
+
+from tourmarks.views import LocationViewSet, VisitViewSet, UserView, UserCreateView, UserDetailView, UserRatioView, \
+    UserListView
 
 # app_name = 'api'
 
+
+# location_list=LocationViewSet
+
 router = routers.SimpleRouter()
-router.register(r'locations', LocationViewSet)
+router.register('locations', LocationViewSet)
 router.register('visits', VisitViewSet)
 
 urlpatterns = [
-    url('register/', UserCreate.as_view(), name='register')
-    , url('sign_in/', rfa_views.obtain_auth_token, name='sign_in')
-    , url('users/', UserListView.as_view(), name='user_list')
+    url('register/', UserCreateView.as_view(), name='register')
+    # , url('sign_in/', rfa_views.obtain_auth_token, name='sign_in')
+    , url(r'^sign_in/$', drf_urls.login, name='login')
+    , url(r'^sign_out/$', drf_urls.login, name='logout')
+    # , url('sign_in/', rfa_views.obtain_auth_token, name='sign_in')
+    , url('users/$', UserListView.as_view(), name='user_list')
     , url('users/(?P<pk>\d+)/$', UserDetailView.as_view(), name='user_details')
     , url('users/(?P<pk>\d+)/ratio/$', UserRatioView.as_view(), name='user_ratio')
 ]

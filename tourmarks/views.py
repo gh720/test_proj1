@@ -1,5 +1,8 @@
-from rest_framework import generics
+import datetime
+
+from rest_framework import generics, status
 from rest_framework.decorators import action
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework import viewsets
 
@@ -8,28 +11,46 @@ from tourmarks.serializers import UserSerializer
 
 import tourmarks.serializers as srz
 
-import rest_framework.urls
+# import rest_framework.urls
 
 
 class UserListView(generics.ListAPIView):
-    # def get(self, request):
-    #     users = User.objects.all()[:10]
-    #     data = UserSerializer(users, many=True).data
-    #     return Response(data)
-
-    queryset= User.objects.all()
+    queryset = User.objects.all()
     serializer_class = UserSerializer
-
-class UserCreate(generics.CreateAPIView):
-    authentication_classes = ()
-    permission_classes = ()
-    queryset= User.objects.all()
-    serializer_class = UserSerializer
-
 
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+class UserCreateView(generics.CreateAPIView):
+    authentication_classes = ()
+    permission_classes = ()
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+class UserRatioView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = srz.UserRatioSerializer(user)
+        return Response(serializer.data)
+        # return super().get(request, *args, **kwargs)
+
+
+class UserView(generics.mixins.CreateModelMixin
+               , generics.mixins.RetrieveModelMixin
+               , generics.mixins.ListModelMixin
+               , generics.GenericAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    @action(methods=['get'], detail=True)
+    def ratio(self,request,pk,*args,**kwargs):
+        user = self.get_object()
+        szer = srz.UserRatioSerializer(user)
+        return Response(szer.data)
+
 
 
 class VisitViewSet(viewsets.ModelViewSet):
@@ -41,23 +62,26 @@ class VisitViewSet(viewsets.ModelViewSet):
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = srz.LocationSerializer
-    http_method_names = ['get']
+    http_method_names = ['get', 'post']
 
     @action(methods=['get'], detail=True)
-    def ratio(self):
+    def ratio(self, request, *args, **kwargs):
         location = self.get_object()
         szer = srz.LocationRatioSerializer(location)
         return Response(szer.data)
 
+    @action(methods=['post'], detail=True)
+    def visit(self, request, *args, **kwargs):
+        user = self.request.user
+        location = self.get_object()
+        date = datetime.datetime.now()
+        visit = Visit.objects.create(**dict(user_id=user, location_id=location, date=date, ratio=0))
+        serializer = srz.VisitSerializer(visit, data=self.request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class UserRatioView(generics.GenericAPIView):
-    serializer_class = srz.UserRatioSerializer
-
-    @action(methods=['get'], detail=True)
-    def ratio(self):
-        user = self.get_object()
-        szer = srz.UserRatioSerializer(user)
-        return Response(szer.data)
 
 
 

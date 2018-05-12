@@ -1,3 +1,4 @@
+from django.db.models import QuerySet
 from rest_framework import serializers
 from rest_framework.decorators import detail_route, action
 
@@ -31,21 +32,25 @@ class LocationSerializer(serializers.ModelSerializer):
         exclude = []
 
 class UserRatioSerializer(serializers.Serializer):
+
     def to_representation(self, instance):
         '''
          {"count": 17, "avg": 6.7, "locations": [{"id": 1, ...}, ...]}
         :return:
         '''
-        qs = Visit.objects.filter(user_id=instance.id)
-        stats = dict(count=0, avg=0, locations=[])
+        qs = Visit.objects.filter(user=instance).select_related('location')
+        # visit_szr = VisitSerializer()
+        stats = dict(count=0, avg=0, locations=[], visits=[])
         rating_sum = 0
         for item in qs:
             stats['count']+=1
-            rating_sum+=qs.ratio
-            stats['locations'].append(item)
+            rating_sum+=item.ratio
+            stats['locations'].append(LocationSerializer(item.location).data)
+            stats['visits'].append(VisitSerializer(item).data)
         if stats['count']>0:
             stats['avg']=rating_sum/stats['count']
         return stats
+
 
 
 
@@ -57,13 +62,16 @@ class LocationRatioSerializer(serializers.Serializer):
          {"count": 17, "avg": 6.7, "locations": [{"id": 1, ...}, ...]}
         :return:
         '''
-        qs = Visit.objects.filter(location_id=instance.id)
-        stats = dict(count=0, avg=0, locations=[])
+        qs = Visit.objects.filter(location=instance).select_related('user')
+        # QuerySet.select_related()
+        # visit_szr = VisitSerializer()
+        stats = dict(count=0, avg=0, visitors=[], visits=[])
         rating_sum = 0
         for item in qs:
             stats['count']+=1
-            rating_sum+=qs.ratio
-            stats['locations'].append(item)
+            rating_sum+=item.ratio
+            stats['visitors'].append(UserSerializer(item.user).data)
+            stats['visits'].append(VisitSerializer(item).data)
         if stats['count']>0:
             stats['avg']=rating_sum/stats['count']
         return stats
