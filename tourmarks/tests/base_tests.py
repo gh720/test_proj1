@@ -2,8 +2,12 @@ import datetime
 import unittest
 from unittest import skip
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
+from rest_framework_jwt.settings import api_settings as jwt_settings
 
 from tourmarks.models import Location, Visit
 
@@ -71,7 +75,7 @@ def create_visit(sequence=1, save=True, **data):
     instance = Visit(**data)
     if save:
         instance.save()
-    instance.initial=data
+    instance.initial = data
     return instance
 
 
@@ -85,5 +89,19 @@ class test_wrapper:
                 method = getattr(self.client, method_name)
                 self.assertIsNotNone(method)
                 response = method(end_point, data=data)
-                self.assertEqual(response.status_code, status, msg="failure: endpoint %s, method %s, http:%s, expected:%s" % (
-                    end_point, method_name, response.status_code, status))
+                self.assertEqual(response.status_code, status,
+                                 msg="failure: endpoint %s, method %s, http:%s, expected:%s" % (
+                                     end_point, method_name, response.status_code, status))
+
+        def login(self, username, password):
+            if getattr(settings, 'USE_JWT_FOR_TESTS', None):
+                url = reverse('sign_in')
+                response = self.client.post(url, data=dict(username=username, password=password))
+                self.assertEquals(response.status_code, status.HTTP_200_OK)
+                self.assertTrue('token' in response.data)
+                self.client.credentials(
+                    HTTP_AUTHORIZATION="%s %s" % (jwt_settings.JWT_AUTH_HEADER_PREFIX
+                                                  , response.data['token']))
+            else:
+                self.client.login(username=self.user1.initial.get('username'),
+                                  password=self.user1.initial.get('password'))

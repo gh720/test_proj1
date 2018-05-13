@@ -123,7 +123,7 @@ class test_users_view_authd_c(test_wrapper.base_c):
         self.user2 = create_user(sequence=2)
         self.user3 = create_user(sequence=3, save=False)
         self.user4 = create_user(sequence=4, save=False)
-        self.client.login(username=self.user1.initial.get('username'), password=self.user1.initial.get('password'))
+        self.login(username=self.user1.initial.get('username'), password=self.user1.initial.get('password'))
         self.szr2 = UserSerializer(self.user2)
 
     def test_users_post(self):
@@ -166,6 +166,21 @@ class test_users_view_authd_c(test_wrapper.base_c):
         self.user1.refresh_from_db()
         self.assertEquals(self.user1.email, new_data['email'])
         self.assertEquals(self.user1.password, old_pass)
+
+if getattr(settings,'USE_JWT_FOR_TESTS',None):
+    class test_users_view_authd_no_creds_c(test_wrapper.base_c):
+        def setUp(self):
+            super().setUp()
+            self.user1 = create_user(sequence=1)
+            self.login(username=self.user1.initial.get('username'), password=self.user1.initial.get('password'))
+
+        def test_users_update_no_creds(self):
+            url = reverse('user_details', kwargs=dict(pk=self.user1.id))
+            new_data = {'email': 'update2@test.local'}
+            self.client.credentials()
+            response = self.client.patch(url, data=new_data)
+            self.assertEquals(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class test_users_view_authd_delete_c(test_wrapper.base_c):
     def setUp(self):

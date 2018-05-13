@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import rest_framework
@@ -109,6 +110,7 @@ STATIC_URL = '/static/'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
@@ -124,3 +126,18 @@ AUTH_USER_MODEL = 'tourmarks.User'
 LOGOUT_REDIRECT_URL = '/login/'
 LOGIN_REDIRECT_URL = '/users/'
 LOGIN_URL = '/login/'
+
+JWT_AUTH = {
+    # 'JWT_ENCODE_HANDLER': 'rest_framework_jwt.utils.jwt_encode_handler',
+    # 'JWT_DECODE_HANDLER': 'rest_framework_jwt.utils.jwt_decode_handler',
+    # 'JWT_PAYLOAD_HANDLER': 'rest_framework_jwt.utils.jwt_payload_handler',
+    # 'JWT_SECRET_KEY': SECRET_KEY,
+    # 'JWT_ALGORITHM': 'HS256',
+    # 'JWT_VERIFY': True,
+    # 'JWT_VERIFY_EXPIRATION': True,
+    # 'JWT_LEEWAY': 0,
+    # 'JWT_AUTH_HEADER_PREFIX': 'Bearer',
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=30)
+}
+
+USE_JWT_FOR_TESTS = True
