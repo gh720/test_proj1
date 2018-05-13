@@ -8,17 +8,18 @@ import django.core.validators as v
 
 GENDER_CHOICES = [('M','M'), ('F','F')]
 
-
 class User(AbstractUser):
     # username = models.CharField(max_length=100, unique=True)
     # email = models.EmailField()
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    # first_name = models.CharField(max_length=100)
+    # last_name = models.CharField(max_length=100)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, null=True)
     birth_date = models.DateField(blank=True, null=True)
     country = models.CharField(max_length=200, blank=True, null=True)
 
-    # REQUIRED_FIELDS = []
+    @property
+    def object_owner(self):
+        return self
 
 
 class Location(models.Model):
@@ -33,3 +34,7 @@ class Visit(models.Model):
     location = models.ForeignKey(Location, related_name='visits', on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
     ratio = models.IntegerField(validators=[v.MinValueValidator(0), v.MaxValueValidator(10)])
+
+    @property
+    def object_owner(self):
+        return self.user

@@ -1,3 +1,4 @@
+from django.contrib.auth import update_session_auth_hash
 from django.db.models import QuerySet
 from rest_framework import serializers
 from rest_framework.decorators import detail_route, action
@@ -8,28 +9,35 @@ from tourmarks.models import User, Visit, Location
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'gender', 'birth_date', 'country', 'password']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'gender', 'birth_date', 'country', 'password']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        user = User(username=validated_data['username'], email=validated_data['email'],
-                    first_name=validated_data['first_name'], last_name=validated_data['last_name'],
-                    gender=validated_data['gender'], birth_date=validated_data['birth_date'],
-                    country=validated_data['country'])
-        user.set_password(validated_data['password'])
-        user.save()
+        user = User.objects.create_user(**validated_data)
         return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        if password and not instance.check_password(password): # if password is not the same
+            instance.set_password(password)
+            update_session_auth_hash(self.context.get('request'), instance)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
 
 class VisitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Visit
-        exclude = []
+        fields = ['id', 'user', 'location', 'date', 'ratio']
 
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
-        exclude = []
+        fields = [ 'id', 'country', 'city', 'name', 'description' ]
 
 class UserRatioSerializer(serializers.Serializer):
 

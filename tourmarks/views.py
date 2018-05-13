@@ -1,8 +1,10 @@
 import datetime
 
-from rest_framework import generics, status
+from django.contrib.auth import authenticate, login
+from rest_framework import generics, status, permissions
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework import viewsets
 
@@ -13,14 +15,35 @@ import tourmarks.serializers as srz
 
 # import rest_framework.urls
 
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_authenticated and obj.object_owner == request.user
 
-class UserListView(generics.ListAPIView):
+class UserListView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-class UserDetailView(generics.RetrieveAPIView):
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        # rr = JSONRenderer().render(response.data)
+        return response
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        return response
+
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = (IsOwnerOrReadOnly, )
+
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+
 
 class UserCreateView(generics.CreateAPIView):
     authentication_classes = ()
@@ -28,7 +51,19 @@ class UserCreateView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user_ = serializer.save()
+        user = authenticate(username=user_.username, password=request.data.get('password'))
+        login(request, user)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
 class UserRatioView(generics.RetrieveAPIView):
+    authentication_classes = ()
+    permission_classes = ()
     queryset = User.objects.all()
 
     def get(self, request, *args, **kwargs):
@@ -37,32 +72,18 @@ class UserRatioView(generics.RetrieveAPIView):
         return Response(serializer.data)
         # return super().get(request, *args, **kwargs)
 
-
-class UserView(generics.mixins.CreateModelMixin
-               , generics.mixins.RetrieveModelMixin
-               , generics.mixins.ListModelMixin
-               , generics.GenericAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-    @action(methods=['get'], detail=True)
-    def ratio(self,request,pk,*args,**kwargs):
-        user = self.get_object()
-        szer = srz.UserRatioSerializer(user)
-        return Response(szer.data)
-
-
-
 class VisitViewSet(viewsets.ModelViewSet):
     queryset = Visit.objects.all()
     serializer_class = srz.VisitSerializer
-    http_method_names = ['get']
+    http_method_names = ['get', 'put', 'patch', 'delete']
+    permission_classes = (IsOwnerOrReadOnly,)
 
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = srz.LocationSerializer
-    http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete']
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     @action(methods=['get'], detail=True)
     def ratio(self, request, *args, **kwargs):
@@ -75,7 +96,7 @@ class LocationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         location = self.get_object()
         date = datetime.datetime.now()
-        visit = Visit.objects.create(**dict(user_id=user, location_id=location, date=date, ratio=0))
+        visit = Visit.objects.create(**dict(user=user, location=location, date=date, ratio=0))
         serializer = srz.VisitSerializer(visit, data=self.request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
