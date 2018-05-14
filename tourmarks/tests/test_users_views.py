@@ -1,24 +1,19 @@
-import datetime
 from copy import deepcopy
 
 from django.conf import settings
 from django.contrib import auth
-from django.contrib.auth import get_user_model
-from django.forms import model_to_dict
 from rest_framework import status
 from rest_framework.reverse import reverse
-from rest_framework.test import APITestCase
 
 from tourmarks.serializers import UserSerializer
 
-from .base_tests import User, generate_user_data, create_user, test_wrapper
+from .base_tests import User, create_user, test_wrapper
 
 
 class test_register_valid_c(test_wrapper.base_c):
 
     def setUp(self):
         super().setUp()
-        # self.user=create_user(sequence=1)
         self.url = reverse('register')
         self.data = dict(username='john1', password='john', email='john@test.local'
                          , first_name='john', last_name='smith')
@@ -37,12 +32,17 @@ class test_register_valid_c(test_wrapper.base_c):
     def test_authenticated(self):
         self.assertTrue(self.user.is_authenticated)
 
+    def test_register_duplicate(self):
+        user_count = User.objects.count()
+        response = self.client.post(self.url, data=self.data)
+        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEquals(User.objects.count(), user_count)
+
 
 class test_register_invalid_c(test_wrapper.base_c):
 
     def setUp(self):
         super().setUp()
-        # self.user=create_user(sequence=1)
         self.url = reverse('register')
         self.data = dict(username='john2', email='john@test.local'
                          , first_name='john', last_name='smith')
@@ -81,8 +81,6 @@ class test_sign_in_c(test_wrapper.base_c):
         }
         response = self.client.post(self.url, data)
         self.assertRedirects(response, settings.LOGIN_REDIRECT_URL)
-        # self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertIn('token', response.data)
 
 
     def test_login_post_invalid(self):
@@ -106,7 +104,6 @@ class test_users_view_c(test_wrapper.base_c):
     def test_users_list(self):
         url = reverse('user_list')
         self.check_status(status.HTTP_401_UNAUTHORIZED, url, self.possible_methods - {'get'})
-        # self._test_status(status.HTTP_401_UNAUTHORIZED, url, {'post'})
         response = self.client.get(url)
         self.assertEquals(len(response.data), 2)
 
@@ -128,14 +125,7 @@ class test_users_view_authd_c(test_wrapper.base_c):
 
     def test_users_post(self):
         url = reverse('user_list')
-        self.check_status(status.HTTP_405_METHOD_NOT_ALLOWED, url, self.possible_methods - {'get', 'post'})
-        user_count = User.objects.count()
-        response = self.client.post(url, data=self.user3.initial, format='json')
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-        self.assertEquals(User.objects.count(), user_count + 1)
-        response = self.client.post(url, data=self.user3.initial)
-        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEquals(User.objects.count(), user_count + 1)
+        self.check_status(status.HTTP_405_METHOD_NOT_ALLOWED, url, self.possible_methods - {'get'})
 
     def test_modify_elses(self):
         url = reverse('user_details', kwargs=dict(pk=self.user2.id))

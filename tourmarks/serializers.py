@@ -1,16 +1,11 @@
 from django.contrib.auth import update_session_auth_hash
-from django.db.models import QuerySet
 from rest_framework import serializers
-from rest_framework.decorators import detail_route, action
 from rest_framework_jwt.settings import api_settings as jwt_settings
 
 from tourmarks.models import User, Visit, Location
 
 
 class UserSerializer(serializers.ModelSerializer):
-
-    # token = serializers.SerializerMethodField()
-    # password = serializers.CharField(write_only=True)
 
     def new_token(self, obj):
         jwt_payload_handler = jwt_settings.JWT_PAYLOAD_HANDLER

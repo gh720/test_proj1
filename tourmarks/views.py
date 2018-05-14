@@ -11,39 +11,36 @@ from tourmarks.serializers import UserSerializer
 
 import tourmarks.serializers as srz
 
-# import rest_framework.urls
-
 class IsOwnerOrReadOnly(permissions.BasePermission):
+    '''
+    Granting object permissions: a model's object_owner property should match request.user
+    '''
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and obj.object_owner == request.user
 
-class UserListView(generics.ListCreateAPIView):
+class UserListView(generics.ListAPIView):
+    '''
+    List of users ('user_list')
+    '''
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-    def get(self, request, *args, **kwargs):
-        response = super().get(request, *args, **kwargs)
-        # rr = JSONRenderer().render(response.data)
-        return response
-
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        return response
-
-
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    '''
+    User details ('user_details')
+    '''
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsOwnerOrReadOnly,  )
 
-    def delete(self, request, *args, **kwargs):
-        return super().delete(request, *args, **kwargs)
-
 
 class UserCreateView(generics.CreateAPIView):
+    '''
+    Register a user ('register')
+    '''
     authentication_classes = ()
     permission_classes = ()
     queryset = User.objects.all()
@@ -60,6 +57,9 @@ class UserCreateView(generics.CreateAPIView):
 
 
 class UserRatioView(generics.RetrieveAPIView):
+    '''
+    Rating for a user ('users')
+    '''
     authentication_classes = ()
     permission_classes = ()
     queryset = User.objects.all()
@@ -68,9 +68,11 @@ class UserRatioView(generics.RetrieveAPIView):
         user = self.get_object()
         serializer = srz.UserRatioSerializer(user)
         return Response(serializer.data)
-        # return super().get(request, *args, **kwargs)
 
 class VisitViewSet(viewsets.ModelViewSet):
+    '''
+    Endpoints for a visit ('visits')
+    '''
     queryset = Visit.objects.all()
     serializer_class = srz.VisitSerializer
     http_method_names = ['get', 'put', 'patch', 'delete']
@@ -78,6 +80,9 @@ class VisitViewSet(viewsets.ModelViewSet):
 
 
 class LocationViewSet(viewsets.ModelViewSet):
+    '''
+    Endpoints for a location ('locations')
+    '''
     queryset = Location.objects.all()
     serializer_class = srz.LocationSerializer
     http_method_names = ['get', 'post', 'put', 'patch', 'delete']
@@ -85,12 +90,20 @@ class LocationViewSet(viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=True)
     def ratio(self, request, *args, **kwargs):
+        '''
+        Average rating for a location ('location')
+        '''
         location = self.get_object()
         szer = srz.LocationRatioSerializer(location)
         return Response(szer.data)
 
     @action(methods=['post'], detail=True)
     def visit(self, request, *args, **kwargs):
+        '''
+        posting a visit info (/locations/{id}/visit)
+        expects: self.request.data to be a json, where rating is a number from 1 to 10:
+            { "ratio": rating }
+        '''
         user = self.request.user
         location = self.get_object()
         date = datetime.datetime.now()
@@ -100,8 +113,6 @@ class LocationViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 '''
@@ -125,9 +136,4 @@ post /locations/<id>/visit BODY {"ratio": 6} (все остальные данн
 текущая, пользоватил - кто отправил запрос, место определено в endpoint`е)
 get /users/<id>/ratio RESPONSE {"count": 17, "avg": 6.7, "locations": [{"id": 1, ...}, ...]}
 get /locations/<id>/ratio RESPONSE {"count": 5, "avg": 8.7, "visitors": [{"id": 1, ...}, ...]}
-Плюсом будет:
--
-использовать для авторизации jwt, подробнее тут http://jwt.io/
--
-тесты
 '''

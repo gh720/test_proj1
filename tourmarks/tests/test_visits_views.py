@@ -1,14 +1,12 @@
-import unittest
 from copy import deepcopy
 
 from django.forms import model_to_dict
 from rest_framework import status
 from rest_framework.reverse import reverse
 
-from tourmarks.models import Location, Visit
+from tourmarks.models import Visit
 from tourmarks.tests.test_locations_views import locations_test_base_c
-from .base_tests import User, generate_user_data, create_user, test_wrapper, generate_location_data, create_location, \
-    create_visit
+from .base_tests import create_user, test_wrapper, create_location, create_visit
 
 
 def test_list(self):
@@ -41,13 +39,12 @@ class test_visits_views_c(visits_test_wrapper.base_c):
     def test_visits_list(self):
         url = reverse('visit-list')
         self.check_status(status.HTTP_405_METHOD_NOT_ALLOWED, url, self.possible_methods - {'get'})
-        # self._test_status(status.HTTP_401_UNAUTHORIZED, url, {'post'})
         response = self.client.get(url)
         self.assertEquals(len(response.data), 2)
 
     def test_visits_post_anon(self):
         url = reverse('visit-detail', kwargs=dict(pk=self.visit1.id))
-        self.check_status(status.HTTP_401_UNAUTHORIZED, url, self.possible_methods - {'get','post'})
+        self.check_status(status.HTTP_401_UNAUTHORIZED, url, self.possible_methods - {'get', 'post'})
         self.check_status(status.HTTP_405_METHOD_NOT_ALLOWED, url, {'post'})
         response = self.client.get(url)
         self.assertEquals(response.status_code, status.HTTP_200_OK)
@@ -64,14 +61,13 @@ class test_visits_view_authd_c(visits_test_wrapper.base_c):
         self.check_status(status.HTTP_405_METHOD_NOT_ALLOWED, url, self.possible_methods - {'get', 'post'})
         visit_count = Visit.objects.count()
         data = model_to_dict(self.visit3)
-        # data.pop('id')
         response = self.client.post(url, data=data)
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(Visit.objects.count(), visit_count + 1)
 
     def test_modify_elses(self):
         url = reverse('visit-detail', kwargs=dict(pk=self.visit2.id))
-        self.check_status(status.HTTP_403_FORBIDDEN, url, self.possible_methods - {'get','post'})
+        self.check_status(status.HTTP_403_FORBIDDEN, url, self.possible_methods - {'get', 'post'})
 
     def test_visits_update_put(self):
         url = reverse('visit-detail', kwargs=dict(pk=self.visit1.id))
@@ -91,7 +87,7 @@ class test_visits_view_authd_c(visits_test_wrapper.base_c):
         new_data = {'ratio': 11}
         response = self.client.patch(url, data=new_data)
         self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(str(response.data['ratio'][0]).index('Ensure this value is less than or equal')>=0)
+        self.assertTrue(str(response.data['ratio'][0]).index('Ensure this value is less than or equal') >= 0)
         new_data = {'ratio': 9}
         response = self.client.patch(url, data=new_data)
         self.assertEquals(response.status_code, status.HTTP_200_OK)

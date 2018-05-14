@@ -1,15 +1,12 @@
-import unittest
 from copy import deepcopy
 
 from django.forms import model_to_dict
 from rest_framework import status
 from rest_framework.reverse import reverse
-from rest_framework.test import APITestCase
 
 from tourmarks.models import Location
-from tourmarks.serializers import UserSerializer
 
-from .base_tests import User, generate_user_data, create_user, test_wrapper, generate_location_data, create_location
+from .base_tests import create_user, test_wrapper, generate_location_data, create_location
 
 
 def test_list(self):
